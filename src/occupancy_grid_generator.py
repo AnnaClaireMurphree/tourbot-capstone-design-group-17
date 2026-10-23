@@ -1,15 +1,23 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+from pathlib import Path
 
+# This script generates an occupancy grid based on the input vectors provided in a text file. The occupancy grid is represented as a matrix, where different values correspond to different types of areas (e.g., floor, wall, door, area to avoid). The script reads the input vectors, processes them to create the occupancy grid, and then displays the grid as an image.
+
+# USER-DEFINED VARIABLES
+input_vector_file = "test_vectors.txt" # change to measurements.txt to see current workings of Broun Hall occupancy grid
 c = 4 # constant factor that each dimension will be multiplied by; the amount of virtual space allocated to 1 inch of real space
 
 def create_matrix(line):
-    # Split the line into individual numbers
+    # Split the first line into individual numbers to get matrix dimensions
     line = line.replace('(', '').replace(')', '').replace('[', '').replace(']', '')
     numbers = list(map(float, line.split(',')))
 
+    # Create a matrix of zeros with dimensions based on the input numbers and the constant factor c
     n = (int(numbers[0] * c))
     m = (int(numbers[1] * c))
+    
+    # Fill the matrix with zeros
     matrix = [[0 for _ in range(m)] for _ in range(n)]
 
     return matrix
@@ -83,15 +91,31 @@ def display_as_image(matrix):
 
     plt.legend(handles=legend_items, loc="upper right", bbox_to_anchor=(1.35, 1))
     plt.show()
-        
-with open("C:\\Users\\annac\\OneDrive\\Auburn\\Capstone\\measurements.txt", "r") as file:
+    
+# Get the parent directory of the current script
+parent_dir = Path(__file__).resolve().parent.parent
+
+# Construct the path to the file inside the subdirectory
+file_path = parent_dir / 'tests' / input_vector_file # change to measurements.txt to see current workings of Broun Hall occupancy grid
+
+# Open and read the file    
+with open(file_path, "r") as file:
     lines = [line.strip() for line in file]
 
+# Create an empty matrix
 matrix = create_matrix(lines[0])
+
+# Separate walls parallel to x-axis from those parallel to y-axis
 (horizontal, vertical) = separate_hor_vert(lines[1:])
+
+# Generate a row in the matrix for each wall parallel to the x-axis
 for i in range(0, len(horizontal), 2):
     process_horizontal(horizontal[i], horizontal[i + 1], matrix)
+    
+# Generate a column in the matrix for each wall parallel to the y-axis
 for i in range(0, len(vertical), 2):
     process_vertical(vertical[i], vertical[i + 1], matrix)
+    
+# Print as an image
 print("Map:")
 display_as_image(matrix)
