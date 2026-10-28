@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+import numpy as np
 from pathlib import Path
 
 # This script generates an occupancy grid based on the input vectors provided in a text file. The occupancy grid is represented as a matrix, where different values correspond to different types of areas (e.g., floor, wall, door, area to avoid). The script reads the input vectors, processes them to create the occupancy grid, and then displays the grid as an image.
 
 # USER-DEFINED VARIABLES
-input_vector_file = "test_vectors.txt" # change to measurements.txt to see current workings of Broun Hall occupancy grid
+input_vector_file = "measurements.txt" 
 c = 4 # constant factor that each dimension will be multiplied by; the amount of virtual space allocated to 1 inch of real space
 
 def create_matrix(line):
@@ -14,11 +15,11 @@ def create_matrix(line):
     numbers = list(map(float, line.split(',')))
 
     # Create a matrix of zeros with dimensions based on the input numbers and the constant factor c
-    n = (int(numbers[0] * c))
-    m = (int(numbers[1] * c))
-    
+    width = (int(numbers[0] * c))
+    height = (int(numbers[1] * c))
+
     # Fill the matrix with zeros
-    matrix = [[0 for _ in range(m)] for _ in range(n)]
+    matrix = [[0 for _ in range(width + 10)] for _ in range(height + 10)]
 
     return matrix
 
@@ -47,8 +48,7 @@ def process_horizontal(line1, line2, matrix):
         round(float(value) * c)
         for value in line1.split(',')
     ]
-    y = len(matrix) - y1 - 1
-    print(line2)
+    y = y1 + 2
     data = line2.split(",")
     for i in range(0, len(data), 2): # for each tuple 
         type = int(data[i])
@@ -57,7 +57,7 @@ def process_horizontal(line1, line2, matrix):
             for t in range(c):
                 y_pos = y - t
                 if 0 <= y_pos < len(matrix):
-                    matrix[y_pos][x] = type
+                    matrix[y_pos + 4][x] = type 
         x1 += length
         
 def process_vertical(line1, line2, matrix):
@@ -67,7 +67,6 @@ def process_vertical(line1, line2, matrix):
         for value in line1.split(',')
     ]
     x = x1
-    print(line2)
     data = line2.split(",")
     for i in range(0, len(data), 2): # for each tuple 
         type = int(data[i])
@@ -77,20 +76,42 @@ def process_vertical(line1, line2, matrix):
                 for t in range(c):
                     x_pos = x + t
                     if 0 <= x_pos < len(matrix[0]):
-                        matrix[len(matrix) - y - 1][x_pos] = type
+                        matrix[y + 4][x_pos] = type 
         y1 += length
-        
-def display_as_image(matrix):
-    plt.imshow(matrix, cmap="pink", interpolation="nearest")
+    
+def display_as_image(matrix, parent_dir):
+    data = np.asarray(matrix, dtype=float)
+    rows, cols = data.shape
+    fig, ax = plt.subplots(figsize=(12,12), dpi=150)
+    
+    ax.imshow(data, 
+              cmap="pink", 
+              interpolation="nearest", 
+              aspect="equal", 
+              origin="upper",
+              resample=False)
+    
+    ax.set_xlim(-0.5, cols - 0.5)
+    ax.set_ylim(rows - 0.5, -0.5)
+    ax.set_axis_off()
+    
     legend_items = [
-        Patch(facecolor=plt.cm.pink(0.0), label="Floor"),
-        Patch(facecolor=plt.cm.pink(0.25), label="Wall"),
-        Patch(facecolor=plt.cm.pink(0.75), label="Door"),
-        Patch(facecolor=plt.cm.pink(1.0), label="Area to Avoid")
-    ]
-
-    plt.legend(handles=legend_items, loc="upper right", bbox_to_anchor=(1.35, 1))
-    plt.show()
+                    Patch(facecolor=plt.cm.pink(0.0), label="Floor"),
+                    Patch(facecolor=plt.cm.pink(0.25), label="Wall"),
+                    Patch(facecolor=plt.cm.pink(0.75), label="Door"),
+                    Patch(facecolor=plt.cm.pink(1.0), label="Area to Avoid")
+                ]
+    
+    ax.legend(handles=legend_items, loc="upper left", bbox_to_anchor=(1.02, 1))
+        
+    fig.savefig(
+        parent_dir / "tests/floor_map.png",
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2
+    )
+    
+    print("Occupancy grid saved to", parent_dir / "tests/floor_map.png")
     
 # Get the parent directory of the current script
 parent_dir = Path(__file__).resolve().parent.parent
@@ -109,13 +130,14 @@ matrix = create_matrix(lines[0])
 (horizontal, vertical) = separate_hor_vert(lines[1:])
 
 # Generate a row in the matrix for each wall parallel to the x-axis
-for i in range(0, len(horizontal), 2):
+print("Processing horizontal walls...")
+for i in range(0, len(horizontal), 2): 
     process_horizontal(horizontal[i], horizontal[i + 1], matrix)
     
 # Generate a column in the matrix for each wall parallel to the y-axis
-for i in range(0, len(vertical), 2):
+print("Processing vertical walls...")
+for i in range(0, len(vertical), 2): 
     process_vertical(vertical[i], vertical[i + 1], matrix)
     
-# Print as an image
-print("Map:")
-display_as_image(matrix)
+# Save as an image
+display_as_image(matrix, parent_dir)
