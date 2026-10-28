@@ -106,7 +106,7 @@ def display_as_image(matrix, parent_dir):
         
     fig.savefig(
         parent_dir / "tests/floor_map.png",
-        dpi=300,
+        dpi=800,
         bbox_inches="tight",
         pad_inches=0.2
     )
